@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>REVERSE SNAKE</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff88; --red: #ff003c; --blue: #00cfff;
+    --yellow: #ffe600; --orange: #ff8c00; --purple: #bf00ff; --pink: #ff0099;
+    --bg: #060a0f;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--green); font-family:'Share Tech Mono',monospace; }
+
+  /* SCREENS */
+  #home, #game { display:none; }
+  #home.show, #game.show { display:flex; }
+  #home {
+    flex-direction:column; align-items:center; justify-content:center;
+    min-height:100vh; padding:20px;
+    background:radial-gradient(ellipse at center,#0a1a10 0%,#060a0f 70%);
+  }
+  #game {
+    flex-direction:column; align-items:center;
+    min-height:100vh; padding:10px 20px;
+  }
+
+  /* HOME */
+  .big-title {
+    font-family:'Orbitron',monospace; font-weight:900;
+    font-size:clamp(1.5rem,6vw,3rem); letter-spacing:0.3em;
+    color:var(--green); text-align:center;
+    text-shadow:0 0 30px var(--green),0 0 80px rgba(0,255,136,0.4);
+    animation:flicker 6s infinite, glow 3s ease-in-out infinite;
+    margin-bottom:6px;
+  }
+  @keyframes flicker{0%,93%,100%{opacity:1}94%{opacity:0.3}95%{opacity:1}97%{opacity:0.5}98%{opacity:1}}
+  @keyframes glow{0%,100%{text-shadow:0 0 30px var(--green),0 0 80px rgba(0,255,136,0.4)}50%{text-shadow:0 0 50px var(--green),0 0 120px rgba(0,255,136,0.7)}}
+  .home-sub { font-size:0.75rem; letter-spacing:0.2em; color:var(--blue); text-shadow:0 0 10px var(--blue); margin-bottom:30px; text-align:center; }
+  .preview { display:flex; gap:6px; margin-bottom:30px; }
+  .seg { width:22px; height:22px; border-radius:3px; }
+  .cards { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:36px; }
+  .card {
+    background:rgba(0,255,136,0.04); border:1px solid rgba(0,255,136,0.15);
+    border-radius:6px; padding:14px 16px; text-align:center; width:120px;
+    transition:all 0.2s;
+  }
+  .card:hover { background:rgba(0,255,136,0.09); border-color:rgba(0,255,136,0.35); transform:translateY(-2px); }
+  .card .ico { font-size:1.5rem; margin-bottom:5px; }
+  .card .ctitle { font-size:0.6rem; letter-spacing:0.1em; color:var(--green); margin-bottom:3px; }
+  .card .cdesc { font-size:0.5rem; color:#ffffff44; line-height:1.5; }
+  .play-btn {
+    background:transparent; border:2px solid var(--green); color:var(--green);
+    font-family:'Orbitron',monospace; font-size:1rem; letter-spacing:0.3em;
+    padding:16px 52px; cursor:pointer;
+    text-shadow:0 0 10px var(--green); box-shadow:0 0 20px rgba(0,255,136,0.3);
+    transition:all 0.2s; text-transform:uppercase;
+    animation:breathe 2s ease-in-out infinite;
+  }
+  @keyframes breathe{0%,100%{box-shadow:0 0 20px rgba(0,255,136,0.3)}50%{box-shadow:0 0 50px rgba(0,255,136,0.7)}}
+  .play-btn:hover { background:rgba(0,255,136,0.12); transform:scale(1.05); }
+  .play-btn:active { transform:scale(0.97); }
+  .home-hint { margin-top:14px; font-size:0.52rem; color:#ffffff22; letter-spacing:0.1em; text-align:center; }
+
+  /* GAME HUD */
+  .game-bar { display:flex; align-items:center; gap:14px; margin-bottom:5px; flex-wrap:wrap; justify-content:center; width:100%; }
+  .menu-btn { background:transparent; border:1px solid rgba(0,255,136,0.25); color:rgba(0,255,136,0.5); font-family:'Share Tech Mono',monospace; font-size:0.58rem; letter-spacing:0.1em; padding:4px 10px; cursor:pointer; transition:all 0.15s; }
+  .menu-btn:hover { border-color:var(--green); color:var(--green); }
+  .game-ttl { font-family:'Orbitron',monospace; font-size:0.8rem; letter-spacing:0.2em; color:var(--green); text-shadow:0 0 8px var(--green); }
+  .hud { display:flex; gap:12px; margin-bottom:5px; font-size:0.6rem; letter-spacing:0.08em; flex-wrap:wrap; justify-content:center; }
+  .hi span { color:#ffffff33; }
+  .hi strong { font-family:'Orbitron',monospace; font-size:0.65rem; }
+
+  /* FOOD PANEL */
+  .fpanel { background:rgba(0,0,0,0.45); border:1px solid rgba(0,255,136,0.1); border-radius:4px; padding:5px 8px; margin-bottom:5px; display:flex; flex-direction:column; align-items:center; gap:3px; max-width:500px; width:100%; }
+  .fptitle { font-size:0.48rem; letter-spacing:0.13em; color:#ffffff22; text-transform:uppercase; }
+  .fgrid { display:flex; gap:4px; flex-wrap:wrap; justify-content:center; }
+  .fopt { background:transparent; border:1px solid #1a1a1a; border-radius:3px; padding:3px 5px; cursor:pointer; font-family:'Share Tech Mono',monospace; color:#555; display:flex; flex-direction:column; align-items:center; gap:1px; transition:all 0.15s; position:relative; min-width:46px; }
+  .fopt:hover:not(.ocd) { border-color:#444; color:#bbb; }
+  .fopt.sel { border-color:var(--yellow); color:var(--yellow); box-shadow:0 0 7px rgba(255,230,0,0.25); }
+  .fopt .fe { font-size:0.95rem; line-height:1; }
+  .fopt .fn { font-size:0.4rem; letter-spacing:0.04em; text-transform:uppercase; }
+  .fopt .fd { font-size:0.36rem; color:#ffffff22; text-align:center; }
+  .fopt.sel .fd { color:rgba(255,230,0,0.4); }
+  .fopt .fcd { position:absolute; top:-5px; right:-5px; background:#060a0f; border:1px solid #333; border-radius:50%; width:12px; height:12px; font-size:0.33rem; display:flex; align-items:center; justify-content:center; font-family:'Orbitron',monospace; color:#888; }
+  .fopt.ocd { opacity:0.32; cursor:not-allowed; }
+
+  /* TRAP TOOLBAR */
+  .tbar { display:flex; gap:5px; margin-bottom:5px; flex-wrap:wrap; justify-content:center; }
+  .tbtn { background:transparent; border:1px solid #222; color:#555; font-family:'Share Tech Mono',monospace; font-size:0.52rem; letter-spacing:0.05em; padding:3px 7px; cursor:pointer; transition:all 0.15s; text-transform:uppercase; min-width:60px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .tbtn:hover:not(.oncd) { filter:brightness(1.6); }
+  .tbtn.active { border-color:currentColor; box-shadow:0 0 8px currentColor; }
+  .tbtn.oncd { opacity:0.35; cursor:not-allowed; }
+  .tlbl { font-size:0.54rem; }
+  .tuses { font-size:0.42rem; color:#ffffff33; }
+  .cring { position:relative; width:22px; height:22px; margin:1px auto 0; }
+  .cring svg { position:absolute; top:0; left:0; transform:rotate(-90deg); }
+  .cbg { fill:none; stroke:rgba(255,255,255,0.05); stroke-width:3; }
+  .carc { fill:none; stroke-width:3; stroke-linecap:round; transition:stroke-dashoffset 0.25s linear; }
+  .cnum { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Orbitron',monospace; font-size:0.42rem; }
+  .tw { color:#aaaaff; border-color:rgba(170,170,255,0.22); }
+  .ts { color:var(--orange); border-color:rgba(255,140,0,0.22); }
+  .tf { color:var(--pink); border-color:rgba(255,0,153,0.22); }
+  .tk { color:var(--purple); border-color:rgba(191,0,255,0.22); }
+
+  /* CANVAS */
+  .cwrap { position:relative; }
+  canvas { display:block; border:1px solid rgba(0,255,136,0.18); box-shadow:0 0 20px rgba(0,255,136,0.08); }
+
+  /* OVERLAY */
+  #overlay {
+    position:absolute; inset:0; background:rgba(6,10,15,0.94);
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:10px; font-family:'Orbitron',monospace; display:none;
+  }
+  #overlay.show { display:flex; }
+  #ovTitle { font-size:clamp(1rem,5vw,1.8rem); letter-spacing:0.2em; text-shadow:0 0 20px currentColor; }
+  #ovSub { font-family:'Share Tech Mono',monospace; font-size:0.62rem; color:#ffffff44; letter-spacing:0.1em; text-align:center; }
+  #ovStats { font-size:0.62rem; letter-spacing:0.1em; text-align:center; }
+  .ovbtns { display:flex; gap:10px; margin-top:4px; }
+  .ovbtn { background:transparent; font-family:'Orbitron',monospace; font-size:0.62rem; letter-spacing:0.15em; padding:8px 20px; cursor:pointer; transition:all 0.2s; }
+  .ovbtn:hover { opacity:0.8; }
+
+  /* TOASTS */
+  #toasts { position:absolute; top:6px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:3px; pointer-events:none; z-index:20; }
+  .toast { font-family:'Orbitron',monospace; font-size:0.55rem; letter-spacing:0.1em; padding:3px 12px; border:1px solid; background:rgba(6,10,15,0.92); white-space:nowrap; animation:tin 0.2s ease-out; }
+  @keyframes tin { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+
+  .ginfo { margin-top:5px; font-size:0.48rem; color:#ffffff18; letter-spacing:0.06em; text-align:center; line-height:1.9; }
+  .ginfo b { color:var(--red); } .ginfo em { color:var(--blue); font-style:normal; }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="show">
+  <div class="big-title">⟨ REVERSE SNAKE ⟩</div>
+  <div class="home-sub">You are not the snake. You are the trap.</div>
+  <div class="preview">
+    <div class="seg" style="background:#00ff88;box-shadow:0 0 14px #00ff88"></div>
+    <div class="seg" style="background:rgba(0,255,136,0.72)"></div>
+    <div class="seg" style="background:rgba(0,255,136,0.52)"></div>
+    <div class="seg" style="background:rgba(0,255,136,0.35)"></div>
+    <div class="seg" style="background:rgba(0,255,136,0.2)"></div>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="ico">🍎</div><div class="ctitle">Place Food</div><div class="cdesc">15 foods with unique snake effects</div></div>
+    <div class="card"><div class="ico">🧱</div><div class="ctitle">Set Traps</div><div class="cdesc">Walls, slow, fast & fake food</div></div>
+    <div class="card"><div class="ico">🐍</div><div class="ctitle">AI Snake</div><div class="cdesc">BFS pathfinding, always hunts</div></div>
+    <div class="card"><div class="ico">💀</div><div class="ctitle">Goal</div><div class="cdesc">Trap it before it eats 10 times</div></div>
+  </div>
+  <button class="play-btn" id="playBtn">▶ &nbsp; START GAME</button>
+  <div class="home-hint">click the grid to place food · trap tools have 60s cooldowns</div>
+</div>
+
+<!-- GAME -->
+<div id="game">
+  <div class="game-bar">
+    <button class="menu-btn" id="menuBtn">← MENU</button>
+    <div class="game-ttl">⟨ REVERSE SNAKE ⟩</div>
+  </div>
+  <div class="hud">
+    <div class="hi"><span>TRAPS: </span><strong id="hTraps" style="color:var(--yellow)">0</strong></div>
+    <div class="hi"><span>LENGTH: </span><strong id="hLen" style="color:var(--green)">3</strong></div>
+    <div class="hi"><span>EATS: </span><strong id="hEats" style="color:var(--red)">0/10</strong></div>
+    <div class="hi"><span>LEVEL: </span><strong id="hLvl" style="color:var(--blue)">1</strong></div>
+    <div class="hi"><span>STATE: </span><strong id="hState" style="color:var(--orange)">NORMAL</strong></div>
+  </div>
+  <div class="fpanel">
+    <div class="fptitle">🍽 Select Food to Place</div>
+    <div class="fgrid" id="fgrid"></div>
+  </div>
+  <div class="tbar" id="tbar"></div>
+  <div class="cwrap">
+    <canvas id="c" width="480" height="480"></canvas>
+    <div id="toasts"></div>
+    <div id="overlay">
+      <div id="ovTitle"></div>
+      <div id="ovSub"></div>
+      <div id="ovStats"></div>
+      <div class="ovbtns">
+        <button class="ovbtn" id="ovRetry" style="border:1px solid var(--green);color:var(--green)">RETRY</button>
+        <button class="ovbtn" id="ovMenu" style="border:1px solid var(--blue);color:var(--blue)">MENU</button>
+      </div>
+    </div>
+  </div>
+  <div class="ginfo"><b>CLICK</b> grid to place · AI eats <em>10×</em> = lose · <b>Trap it</b> = win</div>
+</div>
+
+<script>
+// Navigation
+function showHome() {
+  running = false;
+  clearInterval(gameLoop); clearInterval(cdTick); clearTimeout(freezeTmr);
+  document.getElementById('home').classList.add('show');
+  document.getElementById('game').classList.remove('show');
+}
+function showGame() {
+  document.getElementById('home').classList.remove('show');
+  document.getElementById('game').classList.add('show');
+  startGame();
+}
+document.getElementById('playBtn').onclick = showGame;
+document.getElementById('menuBtn').onclick = showHome;
+document.getElementById('ovRetry').onclick = startGame;
+document.getElementById('ovMenu').onclick = showHome;
+
+// Canvas
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const COLS=20, ROWS=20, CELL=canvas.width/COLS;
+const CD=60000;
+
+// Food types
+const FOODS = [
+  {id:'apple',   e:'🍎',n:'Apple',   col:'#ff2244',glow:'#ff003c',fx:'normal', d:'Normal lure',       cd:0    },
+  {id:'banana',  e:'🍌',n:'Banana',  col:'#ffe633',glow:'#ffe600',fx:'slip',   d:'Slips = rand dir',  cd:15000},
+  {id:'cherry',  e:'🍒',n:'Cherry',  col:'#cc0033',glow:'#ff0055',fx:'double', d:'Grows ×2',          cd:20000},
+  {id:'lemon',   e:'🍋',n:'Lemon',   col:'#ffee00',glow:'#ffe600',fx:'reverse',d:'Reverses dir',      cd:25000},
+  {id:'grape',   e:'🍇',n:'Grape',   col:'#9933ff',glow:'#bf00ff',fx:'shrink', d:'Shrinks -2',        cd:20000},
+  {id:'carrot',  e:'🥕',n:'Carrot',  col:'#ff7700',glow:'#ff8c00',fx:'normal', d:'Normal lure',       cd:0    },
+  {id:'broccoli',e:'🥦',n:'Broccoli',col:'#00bb44',glow:'#00ff88',fx:'freeze', d:'Freezes 1.5s',      cd:30000},
+  {id:'corn',    e:'🌽',n:'Corn',    col:'#ffdd00',glow:'#ffe600',fx:'normal', d:'Normal lure',       cd:0    },
+  {id:'pepper',  e:'🌶️',n:'Pepper',  col:'#ff3300',glow:'#ff2200',fx:'turbo',  d:'Turbo 8 ticks',     cd:25000},
+  {id:'pizza',   e:'🍕',n:'Pizza',   col:'#ff9900',glow:'#ff8c00',fx:'grow3',  d:'Grows +3',          cd:20000},
+  {id:'burger',  e:'🍔',n:'Burger',  col:'#cc6600',glow:'#ff8800',fx:'heavy',  d:'Super slow',        cd:25000},
+  {id:'donut',   e:'🍩',n:'Donut',   col:'#ff66aa',glow:'#ff0099',fx:'loop',   d:'Loops 3 ticks',     cd:30000},
+  {id:'taco',    e:'🌮',n:'Taco',    col:'#ffbb33',glow:'#ff8c00',fx:'zigzag', d:'Zigzag 5 ticks',    cd:20000},
+  {id:'icecream',e:'🍦',n:'IceCream',col:'#aaddff',glow:'#00cfff',fx:'slow',   d:'Slows 10 ticks',    cd:15000},
+  {id:'sushi',   e:'🍣',n:'Sushi',   col:'#ff6688',glow:'#ff003c',fx:'normal', d:'Normal lure',       cd:0    },
+];
+const TRAPS = [
+  {id:'wall',lbl:'🧱 WALL',col:'#aaaaff',cls:'tw',uses:3},
+  {id:'slow',lbl:'🐢 SLOW',col:'#ff8c00',cls:'ts',uses:1},
+  {id:'fast',lbl:'⚡ FAST',col:'#ff0099',cls:'tf',uses:1},
+  {id:'fake',lbl:'👻 FAKE',col:'#bf00ff',cls:'tk',uses:1},
+];
+
+// State
+let snake,dir,food,walls,slowT,fastT,fakeF;
+let score,eats,lvl,running=false;
+let slowTk=0,fastTk=0,confTk=0,zigTk=0,loopTk=0,slipNext=false,glitch=0;
+let atepepper=false, hitFast=false, drunkDeath=false, drunkTimer=null;
+let gameLoop,cdTick,freezeTmr;
+let tool='food', selFood='apple';
+let foodCDs={}, trapCDs={};
+
+// Food UI
+function buildFoodUI() {
+  const g = document.getElementById('fgrid');
+  g.innerHTML = '';
+  FOODS.forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'fopt'; b.id = 'fo_'+f.id;
+    b.onclick = () => pickFood(f.id);
+    b.innerHTML = `<span class="fe">${f.e}</span><span class="fn">${f.n}</span><span class="fd">${f.d}</span><span class="fcd" id="fcd_${f.id}"></span>`;
+    g.appendChild(b);
+  });
+}
+function pickFood(id) {
+  const f = FOODS.find(x=>x.id===id);
+  if (f.cd>0 && foodCDs[id] && Date.now()-foodCDs[id]<f.cd) return;
+  selFood=id; tool='food';
+  refreshFoodUI(); refreshTrapUI();
+}
+function refreshFoodUI() {
+  FOODS.forEach(f => {
+    const b=document.getElementById('fo_'+f.id); if(!b) return;
+    const rem = f.cd>0&&foodCDs[f.id] ? Math.max(0,f.cd-(Date.now()-foodCDs[f.id])) : 0;
+    b.classList.toggle('sel', tool==='food'&&selFood===f.id);
+    b.classList.toggle('ocd', rem>0);
+    const cd=document.getElementById('fcd_'+f.id);
+    cd.textContent = rem>0 ? Math.ceil(rem/1000)+'s' : '';
+  });
+}
+
+// Trap UI
+function buildTrapUI() {
+  const tb=document.getElementById('tbar'); tb.innerHTML='';
+  TRAPS.forEach(t => {
+    const b=document.createElement('button');
+    b.className='tbtn '+t.cls; b.id='tb_'+t.id;
+    b.onclick=()=>pickTrap(t.id);
+    const r=9,c=2*Math.PI*r;
+    b.innerHTML=`<span class="tlbl">${t.lbl}</span><div class="cring"><svg width="22" height="22" viewBox="0 0 22 22"><circle class="cbg" cx="11" cy="11" r="${r}"/><circle class="carc" id="ca_${t.id}" cx="11" cy="11" r="${r}" stroke="${t.col}" stroke-dasharray="${c}" stroke-dashoffset="${c}"/></svg><div class="cnum" id="cn_${t.id}" style="color:${t.col}"></div></div><span class="tuses" id="tu_${t.id}">${t.uses} left</span>`;
+    tb.appendChild(b);
+  });
+}
+function pickTrap(id) {
+  const t=TRAPS.find(x=>x.id===id);
+  const used=(trapCDs[id]||[]).length;
+  if(used>=t.uses) return;
+  tool=id; refreshTrapUI(); refreshFoodUI();
+}
+function refreshTrapUI() {
+  const now=Date.now();
+  TRAPS.forEach(t => {
+    const b=document.getElementById('tb_'+t.id); if(!b) return;
+    const cds=trapCDs[t.id]||[];
+    const used=cds.length, left=t.uses-used;
+    const active=cds.find(c=>c+CD>now);
+    const oncd=left<=0||(active!=null);
+    const r=9,circ=2*Math.PI*r;
+    const arc=document.getElementById('ca_'+t.id);
+    const num=document.getElementById('cn_'+t.id);
+    if(active){const rem=active+CD-now;arc.style.strokeDashoffset=circ*(1-rem/CD);num.textContent=Math.ceil(rem/1000);}
+    else{arc.style.strokeDashoffset=circ;num.textContent='';}
+    document.getElementById('tu_'+t.id).textContent=left<=0?'used':`${left} left`;
+    b.classList.toggle('active',tool===t.id);
+    b.classList.toggle('oncd',oncd&&left<=0);
+  });
+}
+function canTrap(id){
+  const t=TRAPS.find(x=>x.id===id);
+  return (trapCDs[id]||[]).length < t.uses;
+}
+function useTrap(id){
+  if(!trapCDs[id]) trapCDs[id]=[];
+  trapCDs[id].push(Date.now());
+}
+
+// Toast
+function toast(msg,col){
+  const d=document.createElement('div');
+  d.className='toast'; d.style.color=col; d.style.borderColor=col; d.textContent=msg;
+  document.getElementById('toasts').appendChild(d);
+  setTimeout(()=>{d.style.transition='opacity 0.4s';d.style.opacity='0';setTimeout(()=>d.remove(),420);},1700);
+}
+
+// Overlay
+function showOverlay(win) {
+  const ov=document.getElementById('overlay');
+  const title=document.getElementById('ovTitle');
+  const sub=document.getElementById('ovSub');
+  const stats=document.getElementById('ovStats');
+  if(drunkDeath){
+    title.style.color='#aaff44'; title.textContent='🍺 DRUNK TO DEATH 🌀';
+    sub.textContent='🌶️ PEPPER → ⚡ SPEED PAD → 🐢 SLOW PAD = LETHAL COMBO';
+    stats.style.color='#aaff44'; stats.textContent=`TRAPS ${score} · LEVEL ${lvl} · EATS ${eats}/10`;
+  } else if(win){
+    title.style.color='var(--yellow)'; title.textContent='SNAKE TERMINATED';
+    sub.textContent='YOU OUTSMARTED THE AI';
+    stats.style.color='var(--yellow)'; stats.textContent=`TRAPS ${score} · LEVEL ${lvl} · EATS ${eats}/10`;
+  } else {
+    title.style.color='var(--red)'; title.textContent='SNAKE WINS';
+    sub.textContent='IT ATE 10 TIMES. YOU FAILED.';
+    stats.style.color='var(--red)'; stats.textContent=`TRAPS PLACED ${score} · LEVEL ${lvl}`;
+  }
+  ov.classList.add('show');
+}
+function hideOverlay(){ document.getElementById('overlay').classList.remove('show'); }
+
+// Game start
+function startGame() {
+  hideOverlay();
+  snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}]; dir={x:1,y:0};
+  food=null; walls=[]; slowT=[]; fastT=[]; fakeF=[];
+  score=0; eats=0; lvl=1; running=true;
+  foodCDs={}; trapCDs={};
+  slowTk=0; fastTk=0; confTk=0; zigTk=0; loopTk=0; slipNext=false; glitch=0;
+  atepepper=false; hitFast=false; drunkDeath=false; if(drunkTimer){clearInterval(drunkTimer);drunkTimer=null;}
+  selFood='apple'; tool='food';
+  clearInterval(gameLoop); clearInterval(cdTick); clearTimeout(freezeTmr);
+  gameLoop=setInterval(tick, speed());
+  cdTick=setInterval(()=>{ refreshFoodUI(); refreshTrapUI(); },250);
+  updateHUD(); refreshFoodUI(); refreshTrapUI(); draw();
+}
+function speed(){ return Math.max(90,200-(lvl-1)*18); }
+
+// Click to place
+canvas.onclick = e => {
+  if(!running) return;
+  const r=canvas.getBoundingClientRect();
+  const gx=Math.floor((e.clientX-r.left)*(canvas.width/r.width)/CELL);
+  const gy=Math.floor((e.clientY-r.top)*(canvas.height/r.height)/CELL);
+  if(gx<0||gx>=COLS||gy<0||gy>=ROWS) return;
+  if(snake.some(s=>s.x===gx&&s.y===gy)) return;
+  const occ=()=>walls.some(w=>w.x===gx&&w.y===gy)||slowT.some(s=>s.x===gx&&s.y===gy)||fastT.some(f=>f.x===gx&&f.y===gy)||fakeF.some(f=>f.x===gx&&f.y===gy)||(food&&food.x===gx&&food.y===gy);
+  if(tool==='food'){
+    if(walls.some(w=>w.x===gx&&w.y===gy)) return;
+    const f=FOODS.find(x=>x.id===selFood);
+    if(f.cd>0&&foodCDs[selFood]&&Date.now()-foodCDs[selFood]<f.cd) return;
+    food={x:gx,y:gy,f};
+    if(f.cd>0) foodCDs[selFood]=Date.now();
+    score++; document.getElementById('hTraps').textContent=score;
+    refreshFoodUI();
+  } else if(tool==='wall'&&canTrap('wall')&&!occ()){ walls.push({x:gx,y:gy}); useTrap('wall'); }
+  else if(tool==='slow'&&canTrap('slow')&&!occ()){ slowT.push({x:gx,y:gy}); useTrap('slow'); }
+  else if(tool==='fast'&&canTrap('fast')&&!occ()){ fastT.push({x:gx,y:gy}); useTrap('fast'); }
+  else if(tool==='fake'&&canTrap('fake')&&!occ()){ fakeF.push({x:gx,y:gy,life:20}); useTrap('fake'); }
+  refreshTrapUI(); draw();
+};
+
+// Tick
+function tick(){
+  if(!running) return;
+  fakeF=fakeF.map(f=>({...f,life:f.life-1})).filter(f=>f.life>0);
+  let ns=null;
+  if(confTk>0){ confTk--; }
+  else if(loopTk>0){ loopTk--; const L=[{x:0,y:-1},{x:1,y:0},{x:0,y:1},{x:-1,y:0}]; const i=L.findIndex(d=>d.x===dir.x&&d.y===dir.y); dir=L[(i+1)%4]; }
+  else if(zigTk>0){ zigTk--; const p=Math.abs(dir.x)===1?[{x:0,y:1},{x:0,y:-1}]:[{x:1,y:0},{x:-1,y:0}]; dir=p[zigTk%2]; }
+  else if(food){ ns=bfs(snake[0],food); }
+  else if(fakeF.length){ const t=fakeF.reduce((b,f)=>{const d=Math.abs(f.x-snake[0].x)+Math.abs(f.y-snake[0].y);return(!b||d<b.d)?{f,d}:b;},null); if(t)ns=bfs(snake[0],t.f); }
+  if(ns) dir={x:ns.x-snake[0].x,y:ns.y-snake[0].y};
+  else if(!loopTk&&!zigTk&&!confTk){
+    const opts=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}].filter(d=>!(d.x===-dir.x&&d.y===-dir.y)).filter(d=>{const nx=snake[0].x+d.x,ny=snake[0].y+d.y;return nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!snake.some(s=>s.x===nx&&s.y===ny)&&!walls.some(w=>w.x===nx&&w.y===ny);});
+    if(opts.length)dir=opts[Math.floor(Math.random()*opts.length)];
+  }
+  if(slipNext){slipNext=false;const o=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];dir=o[Math.floor(Math.random()*4)];toast('🍌 SLIPPED!','#ffe600');}
+  const h={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+  if(h.x<0||h.x>=COLS||h.y<0||h.y>=ROWS){end(true);return;}
+  if(snake.some(s=>s.x===h.x&&s.y===h.y)){end(true);return;}
+  if(walls.some(w=>w.x===h.x&&w.y===h.y)){end(true);return;}
+  snake.unshift(h);
+  // Check food FIRST so atepepper/hitFast flags are set before pad checks
+  if(food&&h.x===food.x&&h.y===food.y){
+    const ft=food.f; food=null; eats++; glitch=6;
+    applyFX(ft);
+    if(eats%3===0){lvl++;if(slowTk<=0&&fastTk<=0){clearInterval(gameLoop);gameLoop=setInterval(tick,speed());}}
+    if(eats>=10){end(false);return;}
+  } else snake.pop();
+  if(slowT.some(s=>s.x===h.x&&s.y===h.y)){
+    if(atepepper && hitFast){
+      // COMBO: pepper -> fast pad -> slow pad = DRUNK DEATH
+      drunkDeath=true; atepepper=false; hitFast=false; glitch=20;
+      toast('🌶️⚡🐢 DRUNK TO DEATH! 🍺','#aaff44');
+      let secs=10;
+      drunkTimer=setInterval(()=>{
+        glitch=8;
+        secs--;
+        if(secs>0){ toast(`🍺 ${secs}...`,'#aaff44'); }
+        else{ clearInterval(drunkTimer); drunkTimer=null; end(true); }
+      },1000);
+    } else if(slowTk<=0&&fastTk<=0){
+      slowTk=14; clearInterval(gameLoop); gameLoop=setInterval(tick,speed()*2.8); toast('🐢 SLOWED','#ff8c00');
+    }
+  }
+  if(fastT.some(f=>f.x===h.x&&f.y===h.y)){
+    if(atepepper) hitFast=true;
+    if(fastTk<=0&&slowTk<=0){fastTk=14;clearInterval(gameLoop);gameLoop=setInterval(tick,Math.max(38,speed()*0.28));}
+    toast('⚡ TURBO','#ff0099');
+  }
+  if(slowTk>0){slowTk--;if(slowTk===0&&fastTk===0){clearInterval(gameLoop);gameLoop=setInterval(tick,speed());}}
+  if(fastTk>0){fastTk--;if(fastTk===0&&slowTk===0){clearInterval(gameLoop);gameLoop=setInterval(tick,speed());}}
+  const fi=fakeF.findIndex(f=>f.x===h.x&&f.y===h.y);
+  if(fi!==-1){fakeF.splice(fi,1);confTk=12;glitch=10;snake.pop();toast('👻 CONFUSED!','#bf00ff');updateHUD();draw();return;}
+  updateHUD(); draw();
+}
+
+function applyFX(f){
+  switch(f.fx){
+    case 'slip':slipNext=true;toast('🍌 BANANA TRAP!',f.glow);break;
+    case 'double':for(let i=0;i<3;i++)snake.push({...snake[snake.length-1]});toast('🍒 DOUBLE GROWTH!',f.glow);break;
+    case 'reverse':dir={x:-dir.x,y:-dir.y};toast('🍋 REVERSED!',f.glow);break;
+    case 'shrink':snake.splice(Math.max(1,snake.length-2));toast('🍇 SHRUNK -2',f.glow);break;
+    case 'freeze':clearInterval(gameLoop);toast('🥦 FROZEN!',f.glow);freezeTmr=setTimeout(()=>{if(running)gameLoop=setInterval(tick,speed());},1500);break;
+    case 'turbo':if(fastTk<=0&&slowTk<=0){fastTk=8;clearInterval(gameLoop);gameLoop=setInterval(tick,Math.max(38,speed()*0.28));}atepepper=true;hitFast=false;toast('🌶️ TURBO! Hit ⚡ then 🐢 for drunk death!',f.glow);break;
+    case 'grow3':for(let i=0;i<3;i++)snake.push({...snake[snake.length-1]});toast('🍕 PIZZA +3!',f.glow);break;
+    case 'heavy':if(slowTk<=0&&fastTk<=0){slowTk=6;clearInterval(gameLoop);gameLoop=setInterval(tick,speed()*3.5);}toast('🍔 BURGER BLOAT!',f.glow);break;
+    case 'loop':loopTk=3;toast('🍩 LOOP!',f.glow);break;
+    case 'zigzag':zigTk=5;toast('🌮 ZIGZAG!',f.glow);break;
+    case 'slow':if(slowTk<=0&&fastTk<=0){slowTk=10;clearInterval(gameLoop);gameLoop=setInterval(tick,speed()*2.5);}toast('🍦 CHILL',f.glow);break;
+    default:toast(f.e+' EATEN',f.glow);
+  }
+}
+
+function bfs(from,target){
+  const q=[[from]],v=new Set([`${from.x},${from.y}`]);
+  while(q.length){
+    const path=q.shift(),cur=path[path.length-1];
+    for(const d of [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}]){
+      const nx=cur.x+d.x,ny=cur.y+d.y,k=`${nx},${ny}`;
+      if(nx===target.x&&ny===target.y)return path[1]||target;
+      if(nx<0||nx>=COLS||ny<0||ny>=ROWS||v.has(k))continue;
+      if(snake.some(s=>s.x===nx&&s.y===ny)||walls.some(w=>w.x===nx&&w.y===ny))continue;
+      v.add(k);q.push([...path,{x:nx,y:ny}]);
+    }
+  }
+  return null;
+}
+
+function draw(){
+  ctx.fillStyle='#060a0f';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='rgba(0,255,136,0.04)';ctx.lineWidth=0.5;
+  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,canvas.height);ctx.stroke();}
+  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*CELL);ctx.lineTo(canvas.width,y*CELL);ctx.stroke();}
+  const em=(e,x,y)=>{ctx.font=`${CELL*0.65}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(e,x*CELL+CELL/2,y*CELL+CELL/2+1);};
+  slowT.forEach(s=>{ctx.fillStyle='rgba(255,140,0,0.18)';ctx.fillRect(s.x*CELL+1,s.y*CELL+1,CELL-2,CELL-2);em('🐢',s.x,s.y);});
+  fastT.forEach(f=>{ctx.fillStyle='rgba(255,0,153,0.18)';ctx.fillRect(f.x*CELL+1,f.y*CELL+1,CELL-2,CELL-2);em('⚡',f.x,f.y);});
+  walls.forEach(w=>{ctx.fillStyle='rgba(130,130,255,0.1)';ctx.fillRect(w.x*CELL,w.y*CELL,CELL,CELL);ctx.strokeStyle='rgba(170,170,255,0.5)';ctx.lineWidth=1.5;ctx.strokeRect(w.x*CELL+1,w.y*CELL+1,CELL-2,CELL-2);em('🧱',w.x,w.y);});
+  fakeF.forEach(f=>{const a=f.life<6?f.life/6:1;ctx.globalAlpha=a;em('👻',f.x,f.y);ctx.globalAlpha=1;});
+  if(food){const p=0.6+0.35*Math.sin(Date.now()/220);ctx.shadowColor=food.f.glow;ctx.shadowBlur=18*p;em(food.f.e,food.x,food.y);ctx.shadowBlur=0;}
+  snake.forEach((seg,i)=>{
+    const a=1-(i/snake.length)*0.55;
+    let col,glow;
+    if(confTk>0){col=`rgba(255,220,0,${a})`;glow='#ffe600';}
+    else if(slowTk>0){col=`rgba(80,255,160,${a*0.75})`;glow='#00ffaa';}
+    else if(fastTk>0){col=`rgba(255,60,180,${a})`;glow='#ff0099';}
+    else{col=`rgba(0,255,136,${a})`;glow='#00ff88';}
+    ctx.shadowColor=glow;ctx.shadowBlur=i===0?(glitch>0?30:14):4;
+    ctx.fillStyle=col;const p=i===0?1:2;ctx.fillRect(seg.x*CELL+p,seg.y*CELL+p,CELL-p*2,CELL-p*2);ctx.shadowBlur=0;
+    if(i===0){ctx.fillStyle='#000';const ex=dir.x,ey=dir.y,cx=seg.x*CELL+CELL/2,cy=seg.y*CELL+CELL/2;ctx.fillRect(cx+ex*3-(ey===0?3:0)-2,cy+ey*3-(ex===0?3:0)-2,3,3);ctx.fillRect(cx+ex*3+(ey===0?3:0)-2,cy+ey*3+(ex===0?3:0)-2,3,3);}
+  });
+  if(glitch>0){ctx.fillStyle='rgba(0,207,255,0.07)';ctx.fillRect(0,Math.random()*canvas.height,canvas.width,3);ctx.fillStyle='rgba(255,0,60,0.07)';ctx.fillRect(0,Math.random()*canvas.height,canvas.width,2);glitch--;}
+  if(drunkDeath){ctx.save();ctx.translate(Math.sin(Date.now()/90)*5,Math.cos(Date.now()/70)*3);ctx.fillStyle='rgba(170,255,68,0.06)';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.restore();}
+  const bw=canvas.width-40;ctx.fillStyle='rgba(255,255,255,0.04)';ctx.fillRect(20,canvas.height-8,bw,4);ctx.fillStyle=`hsl(${120-eats*12},100%,55%)`;ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=5;ctx.fillRect(20,canvas.height-8,bw*(eats/10),4);ctx.shadowBlur=0;
+}
+
+function updateHUD(){
+  document.getElementById('hLen').textContent=snake.length;
+  document.getElementById('hEats').textContent=`${eats}/10`;
+  document.getElementById('hLvl').textContent=lvl;
+  document.getElementById('hState').textContent=drunkDeath?'DRUNK 🍺🌀':confTk>0?'CONFUSED 👻':slowTk>0?'SLOW 🐢':fastTk>0?'TURBO ⚡':zigTk>0?'ZIGZAG 🌮':loopTk>0?'LOOPING 🍩':atepepper?'SPICY 🌶️':'NORMAL';
+}
+
+function end(win){
+  running=false;clearInterval(gameLoop);clearInterval(cdTick);clearTimeout(freezeTmr);
+  showOverlay(win);
+}
+
+buildFoodUI();
+buildTrapUI();
+</script>
+</body>
+</html>
