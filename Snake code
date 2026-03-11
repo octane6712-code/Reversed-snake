@@ -241,6 +241,7 @@ const TRAPS = [
 let snake,dir,food,walls,slowT,fastT,fakeF;
 let score,eats,lvl,running=false;
 let slowTk=0,fastTk=0,confTk=0,zigTk=0,loopTk=0,slipNext=false,glitch=0;
+let atepepper=false, hitFast=false, drunkDeath=false, drunkTimer=null;
 let gameLoop,cdTick,freezeTmr;
 let tool='food', selFood='apple';
 let foodCDs={}, trapCDs={};
@@ -333,7 +334,11 @@ function showOverlay(win) {
   const title=document.getElementById('ovTitle');
   const sub=document.getElementById('ovSub');
   const stats=document.getElementById('ovStats');
-  if(win){
+  if(drunkDeath){
+    title.style.color='#aaff44'; title.textContent='🍺 DRUNK TO DEATH 🌀';
+    sub.textContent='🌶️ PEPPER → ⚡ SPEED PAD → 🐢 SLOW PAD = LETHAL COMBO';
+    stats.style.color='#aaff44'; stats.textContent=`TRAPS ${score} · LEVEL ${lvl} · EATS ${eats}/10`;
+  } else if(win){
     title.style.color='var(--yellow)'; title.textContent='SNAKE TERMINATED';
     sub.textContent='YOU OUTSMARTED THE AI';
     stats.style.color='var(--yellow)'; stats.textContent=`TRAPS ${score} · LEVEL ${lvl} · EATS ${eats}/10`;
@@ -354,6 +359,7 @@ function startGame() {
   score=0; eats=0; lvl=1; running=true;
   foodCDs={}; trapCDs={};
   slowTk=0; fastTk=0; confTk=0; zigTk=0; loopTk=0; slipNext=false; glitch=0;
+  atepepper=false; hitFast=false; drunkDeath=false; if(drunkTimer){clearInterval(drunkTimer);drunkTimer=null;}
   selFood='apple'; tool='food';
   clearInterval(gameLoop); clearInterval(cdTick); clearTimeout(freezeTmr);
   gameLoop=setInterval(tick, speed());
@@ -407,18 +413,38 @@ function tick(){
   if(snake.some(s=>s.x===h.x&&s.y===h.y)){end(true);return;}
   if(walls.some(w=>w.x===h.x&&w.y===h.y)){end(true);return;}
   snake.unshift(h);
-  if(slowT.some(s=>s.x===h.x&&s.y===h.y)&&slowTk<=0&&fastTk<=0){slowTk=14;clearInterval(gameLoop);gameLoop=setInterval(tick,speed()*2.8);toast('🐢 SLOWED','#ff8c00');}
-  if(fastT.some(f=>f.x===h.x&&f.y===h.y)&&fastTk<=0&&slowTk<=0){fastTk=14;clearInterval(gameLoop);gameLoop=setInterval(tick,Math.max(38,speed()*0.28));toast('⚡ TURBO','#ff0099');}
-  if(slowTk>0){slowTk--;if(slowTk===0&&fastTk===0){clearInterval(gameLoop);gameLoop=setInterval(tick,speed());}}
-  if(fastTk>0){fastTk--;if(fastTk===0&&slowTk===0){clearInterval(gameLoop);gameLoop=setInterval(tick,speed());}}
-  const fi=fakeF.findIndex(f=>f.x===h.x&&f.y===h.y);
-  if(fi!==-1){fakeF.splice(fi,1);confTk=12;glitch=10;snake.pop();toast('👻 CONFUSED!','#bf00ff');updateHUD();draw();return;}
+  // Check food FIRST so atepepper/hitFast flags are set before pad checks
   if(food&&h.x===food.x&&h.y===food.y){
     const ft=food.f; food=null; eats++; glitch=6;
     applyFX(ft);
     if(eats%3===0){lvl++;if(slowTk<=0&&fastTk<=0){clearInterval(gameLoop);gameLoop=setInterval(tick,speed());}}
     if(eats>=10){end(false);return;}
   } else snake.pop();
+  if(slowT.some(s=>s.x===h.x&&s.y===h.y)){
+    if(atepepper && hitFast){
+      // COMBO: pepper -> fast pad -> slow pad = DRUNK DEATH
+      drunkDeath=true; atepepper=false; hitFast=false; glitch=20;
+      toast('🌶️⚡🐢 DRUNK TO DEATH! 🍺','#aaff44');
+      let secs=10;
+      drunkTimer=setInterval(()=>{
+        glitch=8;
+        secs--;
+        if(secs>0){ toast(`🍺 ${secs}...`,'#aaff44'); }
+        else{ clearInterval(drunkTimer); drunkTimer=null; end(true); }
+      },1000);
+    } else if(slowTk<=0&&fastTk<=0){
+      slowTk=14; clearInterval(gameLoop); gameLoop=setInterval(tick,speed()*2.8); toast('🐢 SLOWED','#ff8c00');
+    }
+  }
+  if(fastT.some(f=>f.x===h.x&&f.y===h.y)){
+    if(atepepper) hitFast=true;
+    if(fastTk<=0&&slowTk<=0){fastTk=14;clearInterval(gameLoop);gameLoop=setInterval(tick,Math.max(38,speed()*0.28));}
+    toast('⚡ TURBO','#ff0099');
+  }
+  if(slowTk>0){slowTk--;if(slowTk===0&&fastTk===0){clearInterval(gameLoop);gameLoop=setInterval(tick,speed());}}
+  if(fastTk>0){fastTk--;if(fastTk===0&&slowTk===0){clearInterval(gameLoop);gameLoop=setInterval(tick,speed());}}
+  const fi=fakeF.findIndex(f=>f.x===h.x&&f.y===h.y);
+  if(fi!==-1){fakeF.splice(fi,1);confTk=12;glitch=10;snake.pop();toast('👻 CONFUSED!','#bf00ff');updateHUD();draw();return;}
   updateHUD(); draw();
 }
 
@@ -429,7 +455,7 @@ function applyFX(f){
     case 'reverse':dir={x:-dir.x,y:-dir.y};toast('🍋 REVERSED!',f.glow);break;
     case 'shrink':snake.splice(Math.max(1,snake.length-2));toast('🍇 SHRUNK -2',f.glow);break;
     case 'freeze':clearInterval(gameLoop);toast('🥦 FROZEN!',f.glow);freezeTmr=setTimeout(()=>{if(running)gameLoop=setInterval(tick,speed());},1500);break;
-    case 'turbo':if(fastTk<=0&&slowTk<=0){fastTk=8;clearInterval(gameLoop);gameLoop=setInterval(tick,Math.max(38,speed()*0.28));}toast('🌶️ TURBO!',f.glow);break;
+    case 'turbo':if(fastTk<=0&&slowTk<=0){fastTk=8;clearInterval(gameLoop);gameLoop=setInterval(tick,Math.max(38,speed()*0.28));}atepepper=true;hitFast=false;toast('🌶️ TURBO! Hit ⚡ then 🐢 for drunk death!',f.glow);break;
     case 'grow3':for(let i=0;i<3;i++)snake.push({...snake[snake.length-1]});toast('🍕 PIZZA +3!',f.glow);break;
     case 'heavy':if(slowTk<=0&&fastTk<=0){slowTk=6;clearInterval(gameLoop);gameLoop=setInterval(tick,speed()*3.5);}toast('🍔 BURGER BLOAT!',f.glow);break;
     case 'loop':loopTk=3;toast('🍩 LOOP!',f.glow);break;
@@ -477,6 +503,7 @@ function draw(){
     if(i===0){ctx.fillStyle='#000';const ex=dir.x,ey=dir.y,cx=seg.x*CELL+CELL/2,cy=seg.y*CELL+CELL/2;ctx.fillRect(cx+ex*3-(ey===0?3:0)-2,cy+ey*3-(ex===0?3:0)-2,3,3);ctx.fillRect(cx+ex*3+(ey===0?3:0)-2,cy+ey*3+(ex===0?3:0)-2,3,3);}
   });
   if(glitch>0){ctx.fillStyle='rgba(0,207,255,0.07)';ctx.fillRect(0,Math.random()*canvas.height,canvas.width,3);ctx.fillStyle='rgba(255,0,60,0.07)';ctx.fillRect(0,Math.random()*canvas.height,canvas.width,2);glitch--;}
+  if(drunkDeath){ctx.save();ctx.translate(Math.sin(Date.now()/90)*5,Math.cos(Date.now()/70)*3);ctx.fillStyle='rgba(170,255,68,0.06)';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.restore();}
   const bw=canvas.width-40;ctx.fillStyle='rgba(255,255,255,0.04)';ctx.fillRect(20,canvas.height-8,bw,4);ctx.fillStyle=`hsl(${120-eats*12},100%,55%)`;ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=5;ctx.fillRect(20,canvas.height-8,bw*(eats/10),4);ctx.shadowBlur=0;
 }
 
@@ -484,7 +511,7 @@ function updateHUD(){
   document.getElementById('hLen').textContent=snake.length;
   document.getElementById('hEats').textContent=`${eats}/10`;
   document.getElementById('hLvl').textContent=lvl;
-  document.getElementById('hState').textContent=confTk>0?'CONFUSED 👻':slowTk>0?'SLOW 🐢':fastTk>0?'TURBO ⚡':zigTk>0?'ZIGZAG 🌮':loopTk>0?'LOOPING 🍩':'NORMAL';
+  document.getElementById('hState').textContent=drunkDeath?'DRUNK 🍺🌀':confTk>0?'CONFUSED 👻':slowTk>0?'SLOW 🐢':fastTk>0?'TURBO ⚡':zigTk>0?'ZIGZAG 🌮':loopTk>0?'LOOPING 🍩':atepepper?'SPICY 🌶️':'NORMAL';
 }
 
 function end(win){
